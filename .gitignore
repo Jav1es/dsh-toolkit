@@ -26,3 +26,6 @@ desktop.ini
 # 归档
 *.zip
 *.tar.gz
+
+# 预检工具的 npm 元数据缓存
+.npm-cache-compat/
