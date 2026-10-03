@@ -1,0 +1,28 @@
+# 依赖与缓存
+node_modules/
+.cache/
+.pnpm-store/
+
+# 凭据与本地配置（本仓库脚本一律不落盘凭据，此处为兜底）
+.env
+.env.*
+*.credentials.yaml
+.credentials.yaml
+
+# 补丁脚本生成的备份与临时文件
+*.prepatch-*
+*.orig-*
+*.bak
+*.tmp
+npm-root.txt
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 归档
+*.zip
+*.tar.gz

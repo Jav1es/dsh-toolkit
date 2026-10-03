@@ -1,0 +1,9 @@
+{
+  "total_catalog": 4382,
+  "with_npm": 2253,
+  "no_npm": 2129,
+  "installable": 604,
+  "installable_undeclared": 918,
+  "blocked": 731,
+  "dshmarket_compatible_but_blocked": 481
+}
