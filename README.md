@@ -70,16 +70,20 @@ DSH 大量内置包**不在 `node_modules`**，而是打包在桌面端的 `reso
 
 ```powershell
 $env:DSH_ASAR = "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\app.asar"
-node ./dsh-maintenance/asar-probe/probe.mjs list "README"
+node ./dsh-maintenance/asar-probe/probe.mjs list "README"     # 参数是正则，按路径匹配
 node ./dsh-maintenance/asar-probe/probe.mjs read "/dsh/node_modules/@deepseek-ai/<pkg>/README.md"
 ```
+
+> `list` 的第三个参数是**正则**而非文件名；命中为空时只打印表头与文件总数（属正常，不是报错）。
 
 ---
 
 ## 2. compat-check —— 插件兼容性预检
 
 ```powershell
-pwsh -File ./compat-check/check-plugin-compat.ps1 -Plugin <包名>@<版本>
+pwsh -File ./compat-check/check-plugin-compat.ps1 -Help                      # 看用法与退出码
+pwsh -File ./compat-check/check-plugin-compat.ps1 -Specs 'dshmarket@1.38.1'  # 查指定候选
+pwsh -File ./compat-check/check-plugin-compat.ps1 -Profile "$env:USERPROFILE\.dsh\profiles\desktop"
 ```
 
 - 自动识别本机 Harness 版本与全部 `@deepseek-ai/*` 提供版本

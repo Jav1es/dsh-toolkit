@@ -43,12 +43,29 @@
 .PARAMETER CacheDir
   npm metadata cache directory; defaults to $PSScriptRoot\.npm-cache-compat
   (inside the workspace).
+
+.PARAMETER Help
+  Print this usage summary and exit without running any check.
 #>
 param(
     [string]$Specs = '',
     [string]$Profile = (Join-Path $env:DSH_HOME 'profiles\web'),
-    [string]$CacheDir = (Join-Path $PSScriptRoot '.npm-cache-compat')
+    [string]$CacheDir = (Join-Path $PSScriptRoot '.npm-cache-compat'),
+    [Alias('h', '?')]
+    [switch]$Help
 )
+
+if ($Help) {
+    Get-Help $PSCommandPath -Detailed
+    @'
+
+Exit codes: 0 = pass | 1 = incompatible (do NOT update) | 3 = could not verify
+Examples:
+  .\check-plugin-compat.ps1 -Specs 'dshmarket@1.38.1'
+  .\check-plugin-compat.ps1 -Profile "$env:USERPROFILE\.dsh\profiles\desktop"
+'@ | Write-Host
+    exit 0
+}
 
 $ErrorActionPreference = 'Continue'
 
