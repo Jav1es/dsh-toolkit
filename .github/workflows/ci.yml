@@ -1,0 +1,92 @@
+name: CI
+
+# dsh-toolkit 是 PowerShell + Node 脚本集合，无依赖、无构建步骤。
+# CI 只做静态检查：语法能否解析、脚本有没有把本机路径写死。
+# 这些脚本的运行需要真实 DSH 环境，runner 上没有，所以不跑功能测试
+# —— 装了假环境再跑，绿了也说明不了问题。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: 脚本语法 + 敏感信息
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: PowerShell 语法解析
+        run: |
+          $files = Get-ChildItem -Recurse -File -Filter *.ps1 |
+            Where-Object { $_.FullName -notmatch '\\\.git\\' }
+          if (-not $files) { Write-Host "::error::没有找到任何 .ps1"; exit 1 }
+          $bad = 0
+          foreach ($f in $files) {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $f.FullName, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              Write-Host "::error file=$($f.Name)::$($errors.Count) 处语法错误"
+              $errors | Select-Object -First 5 | ForEach-Object { Write-Host "  $($_.Message)" }
+              $bad++
+            } else {
+              Write-Host "✅ $($f.Name)"
+            }
+          }
+          if ($bad -gt 0) { exit 1 }
+
+      - name: Node 语法检查
+        run: |
+          $files = Get-ChildItem -Recurse -File -Include *.mjs,*.cjs,*.js |
+            Where-Object { $_.FullName -notmatch '\\\.git\\|\\node_modules\\' }
+          if (-not $files) { Write-Host "没有 Node 脚本，跳过" }
+          $bad = 0
+          foreach ($f in $files) {
+            node --check $f.FullName
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::error file=$($f.Name)::语法错误"
+              $bad++
+            } else {
+              Write-Host "✅ $($f.Name)"
+            }
+          }
+          if ($bad -gt 0) { exit 1 }
+
+      - name: 敏感信息扫描
+        run: |
+          # 这些脚本会读写本机路径，但**源码里不应出现真实用户名**。
+          # 允许占位符（YOUR_USERNAME 等），禁止真实账户名与个人目录。
+          $patterns = @(
+            'C:\\Users\\(?!YOUR_|<)[A-Za-z0-9_.-]+\\',
+            '/Users/(?!YOUR_|<)[A-Za-z0-9_.-]+/',
+            'D:\\Jav1e Flies'
+          )
+          $hits = @()
+          $files = Get-ChildItem -Recurse -File -Include *.ps1,*.mjs,*.cjs,*.js,*.md,*.json,*.yml |
+            Where-Object { $_.FullName -notmatch '\\\.git\\|\\node_modules\\' }
+          foreach ($p in $patterns) {
+            $hits += $files | Select-String -Pattern $p -ErrorAction SilentlyContinue
+          }
+          if ($hits) {
+            Write-Host "::error::发现疑似真实本机路径"
+            $hits | Select-Object -First 20 | ForEach-Object { Write-Host "  $($_.Filename):$($_.LineNumber)" }
+            exit 1
+          }
+          Write-Host "✅ 未发现真实本机路径"
